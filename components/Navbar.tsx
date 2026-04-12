@@ -34,7 +34,6 @@ export default function Navbar() {
           : "bg-white/80 backdrop-blur-sm"
       }`}
     >
-      {/* Navbar content sama seperti sebelumnya */}
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center py-4">
           {/* Logo */}
@@ -42,11 +41,9 @@ export default function Navbar() {
             <div className="w-10 h-10 bg-linear-to-r from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
               <span className="text-white font-bold text-xl">K</span>
             </div>
-            <div>
-              <span className="text-xl font-bold text-gray-800">Kisah</span>
-              <span className="text-xl font-bold text-green-600">Kita</span>
-              <span className="text-xs text-gray-500 block -mt-1">.id</span>
-            </div>
+            <span className="text-xl font-bold text-gray-800">
+              Kisah<span className="text-green-600">Kita</span>
+            </span>
           </Link>
 
           {/* Desktop Menu */}

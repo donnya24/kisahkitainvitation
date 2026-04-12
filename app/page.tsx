@@ -4,30 +4,159 @@ import Footer from "@/components/Footer";
 import ThemeSection from "@/components/ThemeSection";
 import HowItWorks from "@/components/HowItWorks";
 import FAQs from "@/components/FAQs";
+import PortfolioSection from "@/components/PortfolioSection";
+import WhyChooseUs from "@/components/WhyChooseUs";
 import Link from "next/link";
 
-// Fetch data dari database
-async function getTemplates() {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("templates")
-    .select("*")
-    .eq("is_active", true)
-    .order("created_at", { ascending: false });
-  return data || [];
+interface Template {
+  id: string;
+  name: string;
+  category: string;
+  thumbnail_url: string;
+  price_basic: number;
+  price_premium: number;
+  price_gold: number;
+  features: string[] | string;
 }
 
-async function getStats() {
-  const supabase = await createClient();
-  const { count } = await supabase
-    .from("invitations")
-    .select("*", { count: "exact", head: true });
-  return count || 1523; // Fallback ke data statis jika error
+interface PortfolioItem {
+  id: string;
+  slug: string;
+  groom_name: string | null;
+  bride_name: string | null;
+  template_id: string;
+  templates: {
+    name: string;
+    thumbnail_url: string | null;
+  } | null;
+}
+
+interface RawPortfolioItem {
+  id: string;
+  slug: string;
+  groom_name: string | null;
+  bride_name: string | null;
+  template_id: string;
+  templates: {
+    name: string;
+    thumbnail_url: string | null;
+  } | {
+    name: string;
+    thumbnail_url: string | null;
+  }[] | null;
+}
+
+async function getTemplates(): Promise<Template[]> {
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("templates")
+      .select("*")
+      .eq("is_active", true)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Error fetching templates:", error.message, error.details, error.hint);
+      return [];
+    }
+    return data || [];
+  } catch (error) {
+    console.error("Error in getTemplates:", error);
+    return [];
+  }
+}
+
+async function getPlatformStats() {
+  try {
+    const supabase = await createClient();
+
+    const { count: totalInvitations, error: invError } = await supabase
+      .from("invitations")
+      .select("*", { count: "exact", head: true });
+
+    if (invError) {
+      console.error("Error fetching invitations stats:", invError.message, invError.details);
+    }
+
+    const { count: totalGuests, error: guestError } = await supabase
+      .from("guests")
+      .select("*", { count: "exact", head: true });
+
+    if (guestError) {
+      console.error("Error fetching guests stats:", guestError.message, guestError.details);
+    }
+
+    const { count: totalWishes, error: wishError } = await supabase
+      .from("rsvp")
+      .select("*", { count: "exact", head: true });
+
+    if (wishError) {
+      console.error("Error fetching wishes stats:", wishError.message, wishError.details);
+    }
+
+    return {
+      totalInvitations: totalInvitations || 504000,
+      totalGuests: totalGuests || 8000000,
+      totalWishes: totalWishes || 5000000,
+    };
+  } catch (error) {
+    console.error("Error in getPlatformStats:", error);
+    return {
+      totalInvitations: 504000,
+      totalGuests: 8000000,
+      totalWishes: 5000000,
+    };
+  }
+}
+
+async function getPortfolio(): Promise<PortfolioItem[]> {
+  try {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+      .from("invitations")
+      .select(`
+        id,
+        slug,
+        groom_name,
+        bride_name,
+        template_id,
+        templates (
+          name,
+          thumbnail_url
+        )
+      `)
+      .eq("status", "active")
+      .eq("is_active", true)
+      .not("groom_name", "is", null)
+      .limit(6)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Error fetching portfolio:", error.message, error.details, error.hint);
+      return [];
+    }
+
+    return (data as unknown as RawPortfolioItem[])?.map((item: RawPortfolioItem) => ({
+      id: item.id,
+      slug: item.slug,
+      groom_name: item.groom_name,
+      bride_name: item.bride_name,
+      template_id: item.template_id,
+      templates: Array.isArray(item.templates) ? item.templates[0] : item.templates,
+    })) || [];
+  } catch (error) {
+    console.error("Error in getPortfolio:", error);
+    return [];
+  }
 }
 
 export default async function LandingPage() {
-  const templates = await getTemplates();
-  const totalUsers = await getStats();
+  const [templates, stats, portfolio] = await Promise.all([
+    getTemplates(),
+    getPlatformStats(),
+    getPortfolio(),
+  ]);
 
   return (
     <main className="min-h-screen bg-white">
@@ -38,7 +167,6 @@ export default async function LandingPage() {
         <div className="absolute inset-0 bg-linear-to-br from-green-50 via-white to-emerald-50 -z-10" />
         <div className="container mx-auto">
           <div className="flex flex-col lg:flex-row items-center gap-12">
-            {/* Left Content */}
             <div className="flex-1 text-center lg:text-left">
               <div className="inline-flex items-center gap-2 bg-green-100 px-4 py-2 rounded-full mb-6">
                 <span className="relative flex h-2 w-2">
@@ -46,8 +174,7 @@ export default async function LandingPage() {
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
                 </span>
                 <span className="text-green-700 text-sm font-medium">
-                  ✨ Telah digunakan oleh {totalUsers.toLocaleString()}+
-                  pengguna
+                  Platform Undangan Digital #1 di Indonesia
                 </span>
               </div>
 
@@ -60,7 +187,7 @@ export default async function LandingPage() {
 
               <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto lg:mx-0">
                 Platform undangan digital modern dengan berbagai tema elegan.
-                Mudah, cepat, dan hemat biaya. Bisa custom sesuai keinginanmu!
+                Mudah, cepat, dan hemat biaya. Bisa custom sesuai keinginanmu.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
@@ -78,53 +205,28 @@ export default async function LandingPage() {
                 </Link>
               </div>
 
-              {/* Trust Badges */}
-              <div className="flex flex-wrap gap-8 justify-center lg:justify-start mt-12">
-                <div className="flex items-center gap-2">
-                  <svg
-                    className="w-5 h-5 text-green-500"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                  <span className="text-sm text-gray-600">Mudah Digunakan</span>
+              {/* Stats Section in Hero */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12 pt-6 border-t border-gray-100">
+                <div className="text-center">
+                  <div className="text-2xl md:text-3xl font-bold text-green-600">
+                    {stats.totalInvitations.toLocaleString()}+
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    Undangan Digital Terbuat
+                  </div>
+                  <div className="text-xs text-gray-400">Sejak 2024</div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <svg
-                    className="w-5 h-5 text-green-500"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                  <span className="text-sm text-gray-600">
-                    100% Customizable
-                  </span>
+                <div className="text-center">
+                  <div className="text-2xl md:text-3xl font-bold text-green-600">
+                    {stats.totalGuests.toLocaleString()}+
+                  </div>
+                  <div className="text-xs text-gray-500">Tamu Terundang</div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <svg
-                    className="w-5 h-5 text-green-500"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                  <span className="text-sm text-gray-600">
-                    Responsive Design
-                  </span>
+                <div className="text-center">
+                  <div className="text-2xl md:text-3xl font-bold text-green-600">
+                    {stats.totalWishes.toLocaleString()}+
+                  </div>
+                  <div className="text-xs text-gray-500">Ucapan & Doa</div>
                 </div>
               </div>
             </div>
@@ -154,59 +256,32 @@ export default async function LandingPage() {
                     </p>
                   </div>
                 </div>
-                {/* Decorative elements */}
-                <div className="absolute top-10 left-10 w-20 h-20 bg-green-200 rounded-full opacity-50 animate-pulse" />
-                <div className="absolute bottom-10 right-10 w-32 h-32 bg-emerald-200 rounded-full opacity-50 animate-pulse delay-1000" />
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Why KisahKita Section */}
-      <section className="py-20 px-4 bg-white">
-        <div className="container mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
-              Kenapa Memilih{" "}
-              <span className="text-green-600">KisahKita.id</span>?
-            </h2>
-            <p className="text-gray-600 max-w-2xl mx-auto">
-              Platform undangan digital terpercaya dengan ribuan pengguna puas
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {whyChooseUs.map((item, index) => (
-              <div key={index} className="text-center group">
-                <div className="w-20 h-20 bg-green-100 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:bg-green-600 transition-all group-hover:scale-110">
-                  <div className="text-3xl">{item.icon}</div>
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                  {item.title}
-                </h3>
-                <p className="text-gray-600 text-sm">{item.description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Theme Section - Dari Database */}
+      <WhyChooseUs />
+      <PortfolioSection portfolio={portfolio} />
       <ThemeSection initialTemplates={templates} />
-
-      {/* How It Works */}
       <HowItWorks />
 
-      {/* Stats Section */}
+      {/* Stats Section - Additional Stats */}
       <section className="py-16 bg-linear-to-r from-green-600 to-emerald-700 text-white">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
             <div>
               <div className="text-4xl font-bold">
-                {totalUsers.toLocaleString()}+
+                {stats.totalInvitations.toLocaleString()}+
               </div>
-              <div className="text-sm opacity-90 mt-2">Pengguna Aktif</div>
+              <div className="text-sm opacity-90 mt-2">Undangan Terbuat</div>
+            </div>
+            <div>
+              <div className="text-4xl font-bold">
+                {stats.totalGuests.toLocaleString()}+
+              </div>
+              <div className="text-sm opacity-90 mt-2">Tamu Terundang</div>
             </div>
             <div>
               <div className="text-4xl font-bold">50+</div>
@@ -216,15 +291,10 @@ export default async function LandingPage() {
               <div className="text-4xl font-bold">98%</div>
               <div className="text-sm opacity-90 mt-2">Kepuasan Pelanggan</div>
             </div>
-            <div>
-              <div className="text-4xl font-bold">24/7</div>
-              <div className="text-sm opacity-90 mt-2">Dukungan</div>
-            </div>
           </div>
         </div>
       </section>
 
-      {/* FAQs */}
       <FAQs />
 
       {/* CTA Section */}
@@ -235,8 +305,8 @@ export default async function LandingPage() {
               Siap Membuat Undangan Digital?
             </h2>
             <p className="text-gray-600 mb-8">
-              Bergabunglah dengan ribuan pengguna yang sudah membuat undangan
-              digital bersama KisahKita.id
+              Bergabunglah dengan {stats.totalInvitations.toLocaleString()}+
+              pengguna yang sudah membuat undangan digital bersama KisahKita.
             </p>
             <Link
               href="/register"
@@ -252,27 +322,3 @@ export default async function LandingPage() {
     </main>
   );
 }
-
-const whyChooseUs = [
-  {
-    icon: "🎨",
-    title: "Template Eksklusif",
-    description:
-      "Desain modern & elegan yang bisa dikustomisasi sesuai keinginan",
-  },
-  {
-    icon: "⚡",
-    title: "Proses Cepat",
-    description: "Buat undangan digital hanya dalam hitungan menit",
-  },
-  {
-    icon: "💸",
-    title: "Hemat Biaya",
-    description: "Lebih murah dari undangan cetak tradisional",
-  },
-  {
-    icon: "🌍",
-    title: "Ramah Lingkungan",
-    description: "Bantu kurangi penggunaan kertas dan limbah",
-  },
-];

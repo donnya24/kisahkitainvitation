@@ -1,58 +1,60 @@
-/* app/globals.css - Tailwind CSS v4 */
 @import "tailwindcss";
-
-@custom-variant dark (&:where(.dark, .dark *));
-
-@theme inline {
-  --color-primary: #22c55e;
-  --color-primary-dark: #16a34a;
-  --color-secondary: #f97316;
-  --color-background: var(--color-white);
-  --color-foreground: var(--color-gray-900);
-}
 
 @layer base {
   :root {
-    --primary: 147 51% 47%;
-    --primary-dark: 142 76% 36%;
-    --secondary: 24 95% 53%;
-  }
-}
-
-html {
-  scroll-behavior: smooth;
-}
-
-@layer utilities {
-  .text-gradient {
-    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
-    background-clip: text;
-    -webkit-background-clip: text;
-    color: transparent;
+    --color-pearl: #F8FAFC;
+    --color-navy: #1E293B;
+    --color-gold: #C5A059;
+    --color-gold-light: #D4B87A;
+    --color-gold-dark: #A8883A;
   }
   
-  .animate-ping {
-    animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
+  html {
+    scroll-behavior: smooth;
   }
   
-  .animate-pulse {
-    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  body {
+    font-family: var(--font-jakarta), sans-serif;
+    background-color: var(--color-pearl);
+    color: var(--color-navy);
+  }
+  
+  .font-serif {
+    font-family: var(--font-playfair), serif;
   }
 }
 
-@keyframes ping {
-  75%, 100% {
-    transform: scale(2);
-    opacity: 0;
+@layer components {
+  .bg-pearl {
+    background-color: #F8FAFC;
   }
-}
-
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
+  
+  .text-navy {
+    color: #1E293B;
   }
-  50% {
-    opacity: 0.5;
+  
+  .bg-navy {
+    background-color: #1E293B;
+  }
+  
+  .text-gold {
+    color: #C5A059;
+  }
+  
+  .bg-gold {
+    background-color: #C5A059;
+  }
+  
+  .border-gold {
+    border-color: #C5A059;
+  }
+  
+  .hover-bg-gold-dark:hover {
+    background-color: #A8883A;
+  }
+  
+  .hover-text-gold:hover {
+    color: #C5A059;
   }
 }
 
@@ -62,19 +64,14 @@ html {
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: #F8FAFC;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #22c55e;
+  background: #C5A059;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #16a34a;
-}
-
-/* Delay utilities */
-.delay-1000 {
-  animation-delay: 1s;
+  background: #A8883A;
 }

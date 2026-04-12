@@ -1,13 +1,16 @@
 import type { Metadata } from "next";
-import { Inter, Poppins } from "next/font/google";
+import { Plus_Jakarta_Sans, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import WhatsAppFloat from "@/components/WhatsAppFloat";
 
-const inter = Inter({ subsets: ["latin"] });
-const poppins = Poppins({
-  weight: ["300", "400", "500", "600", "700"],
+const jakarta = Plus_Jakarta_Sans({ 
   subsets: ["latin"],
-  variable: "--font-poppins",
+  variable: "--font-jakarta",
+});
+
+const playfair = Playfair_Display({
+  subsets: ["latin"],
+  variable: "--font-playfair",
 });
 
 export const metadata: Metadata = {
@@ -23,7 +26,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="id">
-      <body className={`${inter.className} ${poppins.variable}`}>
+      <body className={`${jakarta.variable} ${playfair.variable} antialiased`}>
         {children}
         <WhatsAppFloat />
       </body>
