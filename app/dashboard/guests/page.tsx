@@ -1,7 +1,7 @@
 // app/dashboard/guests/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
@@ -26,42 +26,54 @@ export default function GuestsPage() {
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [selectedInvitation, setSelectedInvitation] = useState<string>("");
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [newGuest, setNewGuest] = useState({ name: "", phone: "" });
   const [importData, setImportData] = useState("");
 
+  const fetchGuests = useCallback(async (invitationId: string) => {
+    const supabase = createClient();
+    const { data } = await supabase
+      .from("guests")
+      .select("*")
+      .eq("invitation_id", invitationId)
+      .order("created_at", { ascending: false });
+    setGuests(data || []);
+  }, []);
+
+  const fetchData = useCallback(async () => {
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (user) {
+      const { data: invData } = await supabase
+        .from("invitations")
+        .select("id, slug, groom_name, bride_name")
+        .eq("user_id", user.id);
+      setInvitations(invData || []);
+
+      if (invData && invData.length > 0) {
+        setSelectedInvitation(invData[0].id);
+        fetchGuests(invData[0].id);
+      }
+    }
+  }, [fetchGuests]);
+
   useEffect(() => {
-    const fetchGuests = async (invitationId: string) => {
-      const supabase = createClient();
-      const { data } = await supabase
-        .from("guests")
-        .select("*")
-        .eq("invitation_id", invitationId)
-        .order("created_at", { ascending: false });
-      setGuests(data || []);
-    };
-
-    const fetchData = async () => {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (user) {
-        const { data: invData } = await supabase
-          .from("invitations")
-          .select("id, slug, groom_name, bride_name")
-          .eq("user_id", user.id);
-        setInvitations(invData || []);
-
-        if (invData && invData.length > 0) {
-          setSelectedInvitation(invData[0].id);
-          fetchGuests(invData[0].id);
-        }
+    let isMounted = true;
+    const init = async () => {
+      // Small delay to ensure any synchronous lifecycle work is complete
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      if (isMounted) {
+        await fetchData();
       }
     };
-
-    fetchData();
-  }, []);
+    init();
+    return () => {
+      isMounted = false;
+    };
+  }, [fetchData]);
 
   async function addGuest() {
     if (!newGuest.name) return;
@@ -307,8 +319,77 @@ export default function GuestsPage() {
               </svg>
               Tambah Tamu
             </button>
+            <button
+              onClick={() => setShowImportModal(true)}
+              className="bg-slate-100 text-slate-700 px-5 py-2 rounded-lg font-semibold hover:bg-slate-200 transition flex items-center gap-2"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+                />
+              </svg>
+              Import Bulk
+            </button>
           </div>
         </header>
+
+        {/* Modal Import Bulk */}
+        {showImportModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl max-w-lg w-full p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold">Import Bulk Tamu</h2>
+                <button
+                  onClick={() => setShowImportModal(false)}
+                  className="text-slate-400 hover:text-slate-600"
+                >
+                  <svg
+                    className="w-6 h-6"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
+              <p className="text-sm text-slate-500 mb-4">
+                Masukkan daftar tamu dengan format: <b>Nama, Nomor WA</b> (satu
+                tamu per baris)
+              </p>
+              <textarea
+                className="w-full p-3 border border-slate-300 rounded-lg h-48 mb-4 outline-none focus:ring-2 focus:ring-amber-500"
+                placeholder="Budi, 081234567890&#10;Sari, 08987654321"
+                value={importData}
+                onChange={(e) => setImportData(e.target.value)}
+              ></textarea>
+              <div className="flex gap-3">
+                <button
+                  onClick={async () => {
+                    await importGuests();
+                    setShowImportModal(false);
+                  }}
+                  className="flex-1 bg-amber-600 text-white py-3 rounded-lg font-semibold hover:bg-amber-700 transition"
+                >
+                  Mulai Import
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Pilih Undangan */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-6">

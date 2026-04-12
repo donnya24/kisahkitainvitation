@@ -194,7 +194,7 @@ export default function RegisterPage() {
 
           <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-200"></div>
+               <div className="flex-1 h-px bg-slate-100"></div>
             </div>
             <div className="relative flex justify-center text-sm">
               <span className="px-4 bg-white text-slate-400">Atau</span>
