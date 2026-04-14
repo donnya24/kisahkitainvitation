@@ -1,16 +1,32 @@
 // app/login/page.tsx
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { createClient } from '@/lib/supabase/client';
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
-  const router = useRouter();
+  const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
-  const [formData, setFormData] = useState({ email: '', password: '' });
-  const [error, setError] = useState('');
+  const [formData, setFormData] = useState({ email: "", password: "" });
+  const [error, setError] = useState("");
+
+  // Baca parameter dari URL saat halaman dimuat
+  useEffect(() => {
+    const email = searchParams.get("email");
+    const password = searchParams.get("password");
+
+    if (email) {
+      setFormData((prev) => ({ ...prev, email: decodeURIComponent(email) }));
+    }
+    if (password) {
+      setFormData((prev) => ({
+        ...prev,
+        password: decodeURIComponent(password),
+      }));
+    }
+  }, [searchParams]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -19,7 +35,7 @@ export default function LoginPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setError('');
+    setError("");
 
     try {
       const supabase = createClient();
@@ -30,29 +46,29 @@ export default function LoginPage() {
 
       if (error) throw error;
 
+      console.log("Login sukses, user ID:", data.user.id);
+
       // Ambil role user dari database
       const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', data.user.id)
+        .from("profiles")
+        .select("role")
+        .eq("id", data.user.id)
         .single();
 
       if (profileError) {
-        console.error('Error fetching profile:', profileError);
+        console.error("Error fetching profile:", profileError);
       }
 
-      // Refresh session dulu agar cookie terupdate sebelum navigasi
-      router.refresh();
+      console.log("Role user:", profile?.role);
 
       // Redirect berdasarkan role
-      if (profile?.role === 'admin') {
-        router.push('/admin/dashboard');
+      if (profile?.role === "admin") {
+        window.location.href = "/admin/dashboard";
       } else {
-        router.push('/dashboard');
+        window.location.href = "/dashboard";
       }
-      
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Login gagal';
+      const message = err instanceof Error ? err.message : "Login gagal";
       setError(message);
     } finally {
       setIsLoading(false);
@@ -63,11 +79,18 @@ export default function LoginPage() {
     <div className="min-h-screen bg-pearl flex items-center justify-center px-6 py-12">
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
-          <Link href="/" className="text-3xl font-bold tracking-tighter text-navy inline-block">
+          <Link
+            href="/"
+            className="text-3xl font-bold tracking-tighter text-navy inline-block"
+          >
             KISAH<span className="text-gold">KITA</span>
           </Link>
-          <h2 className="font-serif text-2xl mt-6 mb-2">Selamat Datang Kembali</h2>
-          <p className="text-slate-500 text-sm">Masuk ke akun Anda untuk melanjutkan</p>
+          <h2 className="font-serif text-2xl mt-6 mb-2">
+            Selamat Datang Kembali
+          </h2>
+          <p className="text-slate-500 text-sm">
+            Masuk ke akun Anda untuk melanjutkan
+          </p>
         </div>
 
         <div className="bg-white rounded-2xl shadow-xl p-8">
@@ -79,7 +102,9 @@ export default function LoginPage() {
 
           <form onSubmit={handleLogin} className="space-y-5">
             <div>
-              <label className="block text-sm font-semibold text-navy mb-2">Email</label>
+              <label className="block text-sm font-semibold text-navy mb-2">
+                Email
+              </label>
               <input
                 type="email"
                 name="email"
@@ -92,7 +117,9 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-navy mb-2">Kata Sandi</label>
+              <label className="block text-sm font-semibold text-navy mb-2">
+                Kata Sandi
+              </label>
               <input
                 type="password"
                 name="password"
@@ -115,7 +142,7 @@ export default function LoginPage() {
                   <span>Memproses...</span>
                 </div>
               ) : (
-                'Masuk'
+                "Masuk"
               )}
             </button>
           </form>
@@ -133,16 +160,34 @@ export default function LoginPage() {
             href="/demo-login"
             className="w-full py-3 border-2 border-gold/30 text-gold rounded-xl font-semibold hover:bg-gold/10 transition flex items-center justify-center gap-2"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
+              />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
             </svg>
             Coba Demo Akun
           </Link>
 
           <p className="text-center text-sm text-slate-500 mt-6">
-            Belum punya akun?{' '}
-            <Link href="/register" className="text-gold font-semibold hover:underline">
+            Belum punya akun?{" "}
+            <Link
+              href="/register"
+              className="text-gold font-semibold hover:underline"
+            >
               Daftar Sekarang
             </Link>
           </p>

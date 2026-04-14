@@ -122,10 +122,11 @@ export default function AdminDashboardPage() {
         totalRsvp: totalRsvp || 0,
       });
 
-      // Get recent users
+      // Get recent users (hanya role 'user', bukan admin)
       const { data: users } = await supabase
         .from("profiles")
         .select("id, email, full_name, role, created_at")
+        .eq("role", "user")
         .order("created_at", { ascending: false })
         .limit(5);
       setRecentUsers(users || []);
